@@ -16,6 +16,7 @@ html,body{margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;}
 body{min-height:100vh;min-height:100dvh}
 #app{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+.topbar{display:flex;justify-content:flex-end;margin:-4px 0 10px}
 h1{font-size:26px;margin:8px 0 4px;text-align:center;letter-spacing:-.5px}
 h2{font-size:20px;margin:0 0 12px}
 .sub{color:var(--muted);text-align:center;font-size:14px;margin-bottom:18px}
@@ -123,6 +124,15 @@ const ROLES = {
   oberon:   {name:"오베론",   team:"e", desc:"악이지만 다른 악을 모르고, 다른 악도 당신을 모릅니다. (멀린에게는 보임)"},
   minion:   {name:"수하",     team:"e", desc:"동료 악을 압니다. 원정을 실패시키고 정체를 숨기세요."}
 };
+// 퍼시벌 설명은 모르가나 유무에 따라 달라짐
+function roleDesc(k){
+  if(k==="percival"){
+    return (S.players||[]).some(p=>p.role==="morgana")
+      ? "멀린과 모르가나가 누군지 압니다. 멀린을 찾아서 지키세요."
+      : "멀린이 누군지 압니다. 멀린을 지키세요.";
+  }
+  return ROLES[k].desc;
+}
 const ROLE_ORDER = ["merlin","percival","servant","assassin","morgana","mordred","oberon","minion"];
 
 // 인원별 추천 조합 (멀린·암살자 기본 포함). 여러 개면 택 1
@@ -319,7 +329,7 @@ function vReveal(){
     <div class="role ${r.team}">
       <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
       <div class="name">${r.name}</div>
-      <div class="desc">${r.desc}</div>
+      <div class="desc">${roleDesc(p.role)}</div>
       <div class="info">${infoFor(i)}</div>
     </div>
     <button class="primary" data-act="hideRole">확인 완료 · ${last?"게임 시작":"다음 사람에게 넘기기"}</button>
@@ -333,7 +343,7 @@ function roleGuide(myRole){
   const cnt = {}; S.players.forEach(p=>cnt[p.role]=(cnt[p.role]||0)+1);
   const items = ROLE_ORDER.filter(k=>cnt[k]).map(k=>{
     const r = ROLES[k];
-    return `<div class="gi ${k===myRole?"me":""}"><span class="pill ${r.team}">${r.team==="g"?"선":"악"}</span> <b>${r.name}</b>${cnt[k]>1?` ×${cnt[k]}`:""}${k===myRole?' <span class="crown">← 나</span>':""}<br><span class="muted">${r.desc}</span></div>`;
+    return `<div class="gi ${k===myRole?"me":""}"><span class="pill ${r.team}">${r.team==="g"?"선":"악"}</span> <b>${r.name}</b>${cnt[k]>1?` ×${cnt[k]}`:""}${k===myRole?' <span class="crown">← 나</span>':""}<br><span class="muted">${roleDesc(k)}</span></div>`;
   }).join("");
   return `<h2 style="text-align:left">이번 게임 역할 설명</h2><div class="guide">${items}</div>`;
 }
@@ -367,7 +377,7 @@ function vTeam(){
     <button class="primary" data-act="toVote" ${S.team.length!==need?"disabled":""}>이 팀으로 투표하기</button>
   </div>
   ${logCard()}
-  <button class="ghost" data-act="menu">메뉴</button>`;
+`;
 }
 
 function vVote(){
@@ -502,15 +512,20 @@ function vMenu(){
     <h2>메뉴</h2>
     <button data-act="closeMenu">← 게임으로 돌아가기</button>
     <div class="gap"></div>
-    <button data-act="again">처음부터 다시 (같은 멤버, 역할 새로)</button>
+    <button data-act="again">🔄 역할 다시 뽑기<br><span class="muted" style="font-weight:400">같은 멤버·같은 설정으로 처음부터</span></button>
     <div class="gap"></div>
-    <button class="evil" data-act="toSetup">게임 끝내고 설정으로</button>
+    <button class="evil" data-act="toSetup">🏠 게임 종료 · 처음 화면으로<br><span style="font-weight:400;font-size:14px">인원·이름·역할 설정부터 다시</span></button>
   </div>
   <div class="card">${roleGuide()}</div>`;
 }
 
 const VIEWS = {setup:vSetup, reveal:vReveal, team:vTeam, vote:vVote, svote:vSVote, svoteResult:vSVoteResult, quest:vQuest, questResult:vQuestResult, assassin:vAssassin, end:vEnd, menu:vMenu};
-function render(){ $app.innerHTML = (VIEWS[S.screen]||vSetup)(); }
+const NO_MENU = ["setup","menu","end"];
+function render(){
+  const top = NO_MENU.includes(S.screen) ? "" :
+    `<div class="topbar"><button class="small ghost" data-act="menu">☰ 메뉴 · 다시하기</button></div>`;
+  $app.innerHTML = top + (VIEWS[S.screen]||vSetup)();
+}
 
 // ---------- 진행 ----------
 function nextLeader(){ S.leader = (S.leader+1) % S.players.length; }
@@ -587,9 +602,12 @@ const ACT = {
     if(t.role==="merlin") endGame("e", `암살자가 멀린(<b>${esc(t.name)}</b>)을 찾아냈습니다!`);
     else endGame("g", `암살자가 <b>${esc(t.name)}</b>님을 지목했지만, 멀린은 <b>${esc(merlin.name)}</b>님이었습니다!`);
   },
-  menu(){ S.prevScreen = S.screen; set({screen:"menu"}); },
+  // 메뉴 갔다 오면 비밀 화면(역할/투표)은 다시 가려진 상태로
+  menu(){ S.prevScreen = S.screen; set({screen:"menu", revealShown:false, questShown:false, tvShown:false}); },
   closeMenu(){ set({screen:S.prevScreen||"team"}); },
-  again(){ S.names = S.players.map(p=>p.name); S.count = S.players.length; startGame(); },
+  again(){
+    if(S.screen==="menu" && !confirm("역할을 새로 뽑아서 처음부터 다시 할까요?")) return;
+    S.names = S.players.map(p=>p.name); S.count = S.players.length; startGame(); },
   toSetup(){
     if(S.screen==="menu" && !confirm("정말 게임을 끝낼까요?")) return;
     const names = S.players ? S.players.map(p=>p.name) : S.names;
