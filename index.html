@@ -61,6 +61,11 @@ input[type=text]{font:inherit;font-size:16px;width:100%;padding:12px;border-radi
 table.rt{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
 table.rt td,table.rt th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 table.rt tr.me{background:#3b3220}
+.preset{border:2px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}
+.preset.on{border-color:var(--gold);background:#3b3220}
+.guide{text-align:left;font-size:14px;line-height:1.5}
+.guide .gi{padding:8px 0;border-bottom:1px solid var(--line)}
+.guide .gi.me{background:rgba(232,185,73,.12);border-radius:8px;padding:8px}
 details summary{cursor:pointer;color:var(--muted);font-size:14px;margin-top:6px}
 .info{margin-top:14px;padding:12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:16px;line-height:1.6}
 .quests{display:flex;justify-content:space-between;gap:6px;margin:8px 0 4px}
@@ -110,32 +115,42 @@ const TEAM_SIZES = {
 const EVIL_COUNT = {5:2,6:2,7:3,8:3,9:3,10:4};
 const ROLES = {
   merlin:   {name:"멀린",     team:"g", desc:"악의 세력이 누군지 알고 있습니다. 하지만 들키면 암살당해요. 은근히 선을 이끄세요."},
-  percival: {name:"퍼시발",   team:"g", desc:"멀린이 누군지 압니다(모르가나가 있으면 둘 중 누가 진짜인지는 모름). 멀린을 지키세요."},
-  servant:  {name:"선의 기사", team:"g", desc:"아무 정보도 없습니다. 대화와 투표로 악을 찾아내세요."},
-  assassin: {name:"암살자",   team:"e", desc:"선이 원정 3번을 성공해도, 마지막에 멀린을 맞히면 악이 승리합니다."},
-  morgana:  {name:"모르가나", team:"e", desc:"퍼시발에게 멀린처럼 보입니다. 멀린 행세를 해서 퍼시발을 헷갈리게 하세요."},
-  mordred:  {name:"모드레드", team:"e", desc:"멀린에게도 정체가 보이지 않는 악의 우두머리입니다."},
+  percival: {name:"퍼시벌",   team:"g", desc:"멀린이 누군지 압니다(모르가나가 있으면 둘 중 누가 진짜인지는 모름). 멀린을 지키세요."},
+  servant:  {name:"신하",     team:"g", desc:"아무 정보도 없습니다. 대화와 투표로 악을 찾아내세요."},
+  assassin: {name:"암살자",   team:"e", desc:"동료 악을 압니다. 선이 원정 3번을 성공해도, 마지막에 멀린을 맞히면 악이 승리합니다."},
+  morgana:  {name:"모르가나", team:"e", desc:"동료 악을 압니다. 퍼시벌에게 멀린처럼 보이니 멀린 행세로 퍼시벌을 헷갈리게 하세요."},
+  mordred:  {name:"모드레드", team:"e", desc:"동료 악을 압니다. 멀린에게도 정체가 보이지 않는 악의 우두머리입니다."},
   oberon:   {name:"오베론",   team:"e", desc:"악이지만 다른 악을 모르고, 다른 악도 당신을 모릅니다. (멀린에게는 보임)"},
-  minion:   {name:"악의 하수인", team:"e", desc:"동료 악을 알고 있습니다. 원정을 실패시키고 정체를 숨기세요."}
+  minion:   {name:"수하",     team:"e", desc:"동료 악을 압니다. 원정을 실패시키고 정체를 숨기세요."}
 };
+const ROLE_ORDER = ["merlin","percival","servant","assassin","morgana","mordred","oberon","minion"];
 
-// 인원별 추천 조합 (멀린·암살자 기본 포함)
+// 인원별 추천 조합 (멀린·암살자 기본 포함). 여러 개면 택 1
+const P = (percival,morgana,mordred,oberon) => ({percival,morgana,mordred,oberon});
 const RECOMMEND = {
-  5: {opts:{percival:true, morgana:true, mordred:false, oberon:false}, tip:"악이 2명뿐이라 모르가나로 퍼시발을 헷갈리게 하는 정도가 적당해요."},
-  6: {opts:{percival:true, morgana:true, mordred:false, oberon:false}, tip:"선이 4명으로 늘어 가장 무난한 표준 구성이에요."},
-  7: {opts:{percival:true, morgana:true, mordred:false, oberon:true},  tip:"악이 3명. 오베론을 넣으면 악끼리도 손발이 안 맞아 선이 할 만해져요. 악이 약하다 싶으면 오베론 대신 모드레드."},
-  8: {opts:{percival:true, morgana:true, mordred:true,  oberon:false}, tip:"선이 5명이라 모드레드를 넣어 멀린의 정보를 줄여 균형을 맞춰요."},
-  9: {opts:{percival:true, morgana:true, mordred:true,  oberon:false}, tip:"선이 6명으로 선이 유리한 인원이라 모드레드는 꼭 넣는 걸 추천해요."},
-  10:{opts:{percival:true, morgana:true, mordred:true,  oberon:true},  tip:"특수 역할 전부. 오베론이 들어가 악도 서로 다 알지는 못해요."}
+  5: [{label:"기본", opts:P(0,0,0,0)}],
+  6: [{label:"모르가나", opts:P(1,1,0,0)},
+      {label:"모드레드", opts:P(1,0,1,0)}],
+  7: [{label:"입문 (특수역할 없음)", opts:P(0,0,0,0)},
+      {label:"+오베론 (선 유리)", opts:P(1,1,0,1)},
+      {label:"+수하", opts:P(1,1,0,0)},
+      {label:"+모드레드 (악 유리)", opts:P(1,1,1,0)}],
+  8: [{label:"입문 (특수역할 없음)", opts:P(0,0,0,0)},
+      {label:"+오베론 (선 유리)", opts:P(1,1,0,1)},
+      {label:"+수하", opts:P(1,1,0,0)},
+      {label:"+모드레드 (악 유리)", opts:P(1,1,1,0)}],
+  9: [{label:"기본", opts:P(1,1,1,0)}],
+  10:[{label:"+오베론", opts:P(1,1,1,1)},
+      {label:"+수하", opts:P(1,1,1,0)}]
 };
-const OPT_NAMES = {percival:"퍼시발", morgana:"모르가나", mordred:"모드레드", oberon:"오베론"};
-function recText(n){
-  const o = RECOMMEND[n].opts, evilN = EVIL_COUNT[n];
-  const good = ["멀린"]; if(o.percival) good.push("퍼시발");
-  const gs = n - evilN - good.length; if(gs>0) good.push(`선의 기사×${gs}`);
+const OPT_NAMES = {percival:"퍼시벌", morgana:"모르가나", mordred:"모드레드", oberon:"오베론"};
+function comboText(n, o){
+  const evilN = EVIL_COUNT[n];
+  const good = ["멀린"]; if(o.percival) good.push("퍼시벌");
+  const gs = n - evilN - good.length; if(gs>0) good.push(`신하 ${gs}`);
   const evil = ["암살자"]; ["morgana","mordred","oberon"].forEach(k=>{ if(o[k]) evil.push(OPT_NAMES[k]); });
-  const ms = evilN - evil.length; if(ms>0) evil.push(`하수인×${ms}`);
-  return {good:good.join(", "), evil:evil.join(", ")};
+  const ms = evilN - evil.length; if(ms>0) evil.push(`수하 ${ms}`);
+  return {good:good.join("+"), evil:evil.join("+")};
 }
 const sameOpts = (a,b) => Object.keys(OPT_NAMES).every(k=>!!a[k]===!!b[k]);
 
@@ -148,7 +163,7 @@ function freshSetup(prev){
     screen:"setup",
     count: prev ? prev.count : 6,
     names: prev ? prev.names.slice() : [],
-    opts: prev ? Object.assign({}, prev.opts) : Object.assign({}, RECOMMEND[6].opts)
+    opts: prev ? Object.assign({}, prev.opts) : Object.assign({}, RECOMMEND[6][0].opts)
   };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -246,23 +261,27 @@ function vSetup(){
   <div class="card">
     <h2>역할</h2>
     ${(() => {
-      const rt = recText(n), applied = sameOpts(S.opts, RECOMMEND[n].opts);
-      const rows = [5,6,7,8,9,10].map(k=>{ const t=recText(k); return `<tr class="${k===n?"me":""}"><td><b>${k}인</b></td><td style="color:#9cc2ff">${t.good}</td><td style="color:#ff9a9d">${t.evil}</td></tr>`; }).join("");
+      const items = RECOMMEND[n].map((r,idx)=>{
+        const t = comboText(n, r.opts), applied = sameOpts(S.opts, r.opts);
+        return `<div class="preset ${applied?"on":""}" data-act="applyRec" data-i="${idx}">
+          <div class="row" style="justify-content:space-between"><b>${r.label}</b><span class="muted">${applied?"✓ 적용됨":"탭해서 적용"}</span></div>
+          <div><span style="color:#9cc2ff">선 ${n-EVIL_COUNT[n]}</span> ${t.good}</div>
+          <div><span style="color:#ff9a9d">악 ${EVIL_COUNT[n]}</span> ${t.evil}</div>
+        </div>`;
+      }).join("");
+      const rows = [5,6,7,8,9,10].map(k=>RECOMMEND[k].map((r,idx)=>{ const t=comboText(k,r.opts);
+        return `<tr class="${k===n?"me":""}"><td>${idx===0?`<b>${k}인</b>`:""}</td><td>${RECOMMEND[k].length>1?`<span class="muted">${r.label}</span><br>`:""}<span style="color:#9cc2ff">${t.good}</span><br><span style="color:#ff9a9d">${t.evil}</span></td></tr>`; }).join("")).join("");
       return `<div class="rec">
-        <div class="tag">⭐ ${n}인 추천 조합</div>
-        <div><span style="color:#9cc2ff">선</span> ${rt.good}</div>
-        <div><span style="color:#ff9a9d">악</span> ${rt.evil}</div>
-        <div class="muted" style="margin-top:6px">${RECOMMEND[n].tip}</div>
-        <div class="gap"></div>
-        <button class="small ${applied?"ghost":"primary"}" data-act="applyRec" ${applied?"disabled":""}>${applied?"✓ 추천 조합 적용됨":"추천 조합 적용"}</button>
+        <div class="tag">⭐ ${n}인 추천 조합${RECOMMEND[n].length>1?" (택 1)":""}</div>
+        ${items}
         <details><summary>인원별 추천 조합 전체 보기</summary>
-          <table class="rt"><tr><th></th><th>선</th><th>악</th></tr>${rows}</table>
+          <table class="rt">${rows}</table>
         </details>
       </div>`;
     })()}
     <div class="muted" style="margin-bottom:10px">직접 고르기 · 멀린과 암살자는 항상 포함</div>
-    ${tog("percival","퍼시발 (선)","멀린을 알아보는 기사")}
-    ${tog("morgana","모르가나 (악)","퍼시발에게 멀린처럼 보임")}
+    ${tog("percival","퍼시벌 (선)","멀린을 알아보는 기사")}
+    ${tog("morgana","모르가나 (악)","퍼시벌에게 멀린처럼 보임")}
     ${tog("mordred","모드레드 (악)","멀린에게 안 보임")}
     ${tog("oberon","오베론 (악)","악끼리 서로 모름")}
   </div>
@@ -294,7 +313,18 @@ function vReveal(){
     </div>
     <button class="primary" data-act="hideRole">확인 완료 · ${last?"게임 시작":"다음 사람에게 넘기기"}</button>
     <div class="muted">누르면 역할이 바로 가려져요</div>
+    <div class="card">${roleGuide(p.role)}</div>
   </div>`;
+}
+
+// 이번 게임에 들어간 역할 설명 (모두에게 같은 내용이라 정보 유출 없음)
+function roleGuide(myRole){
+  const cnt = {}; S.players.forEach(p=>cnt[p.role]=(cnt[p.role]||0)+1);
+  const items = ROLE_ORDER.filter(k=>cnt[k]).map(k=>{
+    const r = ROLES[k];
+    return `<div class="gi ${k===myRole?"me":""}"><span class="pill ${r.team}">${r.team==="g"?"선":"악"}</span> <b>${r.name}</b>${cnt[k]>1?` ×${cnt[k]}`:""}${k===myRole?' <span class="crown">← 나</span>':""}<br><span class="muted">${r.desc}</span></div>`;
+  }).join("");
+  return `<h2 style="text-align:left">이번 게임 역할 설명</h2><div class="guide">${items}</div>`;
 }
 
 function board(){
@@ -426,7 +456,8 @@ function vMenu(){
     <button data-act="again">처음부터 다시 (같은 멤버, 역할 새로)</button>
     <div class="gap"></div>
     <button class="evil" data-act="toSetup">게임 끝내고 설정으로</button>
-  </div>`;
+  </div>
+  <div class="card">${roleGuide()}</div>`;
 }
 
 const VIEWS = {setup:vSetup, reveal:vReveal, team:vTeam, vote:vVote, quest:vQuest, questResult:vQuestResult, assassin:vAssassin, end:vEnd, menu:vMenu};
@@ -438,12 +469,13 @@ function endGame(w, reason){ set({screen:"end", winner:w, reason}); }
 
 const ACT = {
   cnt(el){
-    const wasRec = sameOpts(S.opts, RECOMMEND[S.count].opts);
+    const wasRec = RECOMMEND[S.count].some(r=>sameOpts(S.opts, r.opts));
     S.count = Math.min(10, Math.max(5, S.count + +el.dataset.d));
-    if(wasRec) S.opts = Object.assign({}, RECOMMEND[S.count].opts); // 추천을 쓰고 있었으면 인원에 맞춰 따라감
+    // 추천을 쓰고 있었으면 새 인원의 추천(같은 조합이 있으면 유지, 없으면 첫 번째)으로
+    if(wasRec && !RECOMMEND[S.count].some(r=>sameOpts(S.opts, r.opts))) S.opts = Object.assign({}, RECOMMEND[S.count][0].opts);
     S.error=null; save(); render();
   },
-  applyRec(){ S.opts = Object.assign({}, RECOMMEND[S.count].opts); S.error=null; save(); render(); },
+  applyRec(el){ S.opts = Object.assign({}, RECOMMEND[S.count][+el.dataset.i].opts); S.error=null; save(); render(); },
   start: startGame,
   showRole(){ set({revealShown:true}); },
   hideRole(){
