@@ -56,6 +56,13 @@ input[type=text]{font:inherit;font-size:16px;width:100%;padding:12px;border-radi
 .role.e{background:linear-gradient(160deg,#5c1d22,#33131a)}
 .role .name{font-size:32px;font-weight:800;margin:6px 0}
 .role .desc{font-size:15px;line-height:1.5;color:#e6e2f0}
+.peekbox{position:relative;border-radius:16px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:pointer}
+.peekbox .role{visibility:hidden}
+.peekbox .cover{position:absolute;inset:0;border-radius:16px;background:repeating-linear-gradient(45deg,#2a2639 0 14px,#25212f 14px 28px);
+  border:2px dashed var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px;min-height:260px}
+.peekbox.peek .role{visibility:visible}
+.peekbox.peek .cover{display:none}
+.peekbox:not(.peek) .role{min-height:260px}
 .info{margin-top:14px;padding:12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:16px;line-height:1.6}
 .quests{display:flex;justify-content:space-between;gap:6px;margin:8px 0 4px}
 .q{flex:1;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);display:flex;flex-direction:column;
@@ -244,13 +251,22 @@ function vReveal(){
   const r = ROLES[p.role];
   const last = i === S.players.length-1;
   return `<div class="pass">
-    <div class="role ${r.team}">
-      <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
-      <div class="name">${r.name}</div>
-      <div class="desc">${r.desc}</div>
-      <div class="info">${infoFor(i)}</div>
+    <div class="muted">${nm(i)}님의 역할</div>
+    <div class="peekbox" data-hold>
+      <div class="role ${r.team}">
+        <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
+        <div class="name">${r.name}</div>
+        <div class="desc">${r.desc}</div>
+        <div class="info">${infoFor(i)}</div>
+      </div>
+      <div class="cover">
+        <div style="font-size:44px">👆</div>
+        <div style="font-size:20px;font-weight:800">꾹 누르고 있는 동안만<br>역할이 보여요</div>
+        <div class="muted">손을 떼면 바로 다시 가려집니다</div>
+      </div>
     </div>
-    <button data-act="hideRole">확인했어요 · 가리고 ${last?"게임 시작":"다음 사람에게"}</button>
+    <button class="primary" data-act="hideRole" id="doneBtn" disabled>확인 완료 · ${last?"게임 시작":"다음 사람에게 넘기기"}</button>
+    <div class="muted" id="doneHint">한 번 이상 눌러서 확인하면 버튼이 켜져요</div>
   </div>`;
 }
 
@@ -462,6 +478,19 @@ $app.addEventListener("click", e=>{
   const el = e.target.closest("[data-act]");
   if(el && !el.disabled && ACT[el.dataset.act]) ACT[el.dataset.act](el);
 });
+// 누르고 있는 동안만 역할 보이기
+const unpeek = () => document.querySelectorAll(".peekbox.peek").forEach(b=>b.classList.remove("peek"));
+$app.addEventListener("pointerdown", e=>{
+  const box = e.target.closest("[data-hold]");
+  if(!box) return;
+  e.preventDefault();
+  box.classList.add("peek");
+  const btn = document.getElementById("doneBtn"); if(btn) btn.disabled = false;
+  const hint = document.getElementById("doneHint"); if(hint) hint.textContent = "확인했으면 버튼을 누르고 폰을 넘기세요";
+});
+["pointerup","pointercancel","pointerleave","blur"].forEach(t=>window.addEventListener(t, unpeek));
+document.addEventListener("visibilitychange", unpeek);
+$app.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-hold]")) e.preventDefault(); });
 $app.addEventListener("input", e=>{
   if(e.target.dataset.name!=null){ S.names[+e.target.dataset.name] = e.target.value; save(); }
 });
