@@ -163,7 +163,8 @@ function freshSetup(prev){
     screen:"setup",
     count: prev ? prev.count : 6,
     names: prev ? prev.names.slice() : [],
-    opts: prev ? Object.assign({}, prev.opts) : Object.assign({}, RECOMMEND[6][0].opts)
+    opts: prev ? Object.assign({}, prev.opts) : Object.assign({}, RECOMMEND[6][0].opts),
+    secretVote: prev ? !!prev.secretVote : false
   };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -285,6 +286,16 @@ function vSetup(){
     ${tog("mordred","모드레드 (악)","멀린에게 안 보임")}
     ${tog("oberon","오베론 (악)","악끼리 서로 모름")}
   </div>
+  <div class="card">
+    <h2>찬반 투표 방식</h2>
+    <div class="row">
+      <button class="${!S.secretVote?"primary":""}" data-act="voteMode" data-v="0">✋ 공개 투표</button>
+      <button class="${S.secretVote?"primary":""}" data-act="voteMode" data-v="1">🤫 비밀 투표</button>
+    </div>
+    <div class="muted" style="margin-top:8px">${S.secretVote
+      ? "폰을 돌려가며 각자 몰래 찬성/반대를 누르고, 찬반 개수만 공개돼요."
+      : "다 같이 동시에 👍/👎를 내서 누가 뭘 냈는지 모두 봅니다. (원래 규칙)"}</div>
+  </div>
   ${S.error?`<div class="err">${esc(S.error)}</div>`:""}
   <div class="gap"></div>
   <button class="primary" data-act="start">역할 나눠주기 →</button>`;
@@ -378,6 +389,44 @@ function vVote(){
   <button class="ghost" data-act="backTeam">← 팀 다시 고르기</button>`;
 }
 
+// 비밀 찬반 투표: 대표부터 앉은 순서대로 폰을 돌림
+const voterAt = k => (S.leader + k) % S.players.length;
+function vSVote(){
+  const k = S.tvIdx, pi = voterAt(k), n = S.players.length;
+  const team = S.team.map(i=>`<span class="pill">${nm(i)}</span>`).join(" ");
+  if(!S.tvShown){
+    return `<div class="pass">
+      <div class="muted">🤫 비밀 찬반 투표 ${k+1} / ${n}</div>
+      <div>폰을 이 사람에게 넘기세요</div>
+      <div class="who">${nm(pi)}</div>
+      <button class="primary" data-act="tvShow">내가 ${nm(pi)}이에요</button>
+      ${k===0?`<button class="ghost" data-act="backTeam">← 팀 다시 고르기</button>`:""}
+    </div>`;
+  }
+  return `<div class="pass">
+    <h2>${nm(pi)}님, 이 원정대에 찬성하나요?</h2>
+    <div class="row wrap" style="justify-content:center">${team}</div>
+    ${S.rejects===4?`<div class="err">⚠️ 이번에 부결되면 악이 승리합니다!</div>`:""}
+    <button class="good" data-act="tv" data-v="1" style="padding:28px;font-size:22px">👍 찬성</button>
+    <button class="evil" data-act="tv" data-v="0" style="padding:28px;font-size:22px">👎 반대</button>
+  </div>`;
+}
+function vSVoteResult(){
+  const yes = S.tv.filter(v=>v).length, no = S.tv.length - yes, pass = yes > no;
+  return `${board()}
+  <div class="card center">
+    <h2>찬반 투표 결과</h2>
+    <div class="row" style="justify-content:center;gap:24px;margin:10px 0">
+      <div><div class="big" style="color:#9cc2ff">${yes}</div><div class="muted">👍 찬성</div></div>
+      <div><div class="big" style="color:#ff9a9d">${no}</div><div class="muted">👎 반대</div></div>
+    </div>
+    <div class="big" style="color:${pass?"#9cc2ff":"#ff9a9d"}">${pass?"가결!":"부결!"}</div>
+    <div class="muted">누가 어디에 투표했는지는 공개되지 않아요.</div>
+    <div class="gap"></div>
+    <button class="primary" data-act="${pass?"approve":"reject"}">계속</button>
+  </div>`;
+}
+
 function vQuest(){
   const k = S.questMember, pi = S.team[k];
   if(!S.questShown){
@@ -460,13 +509,14 @@ function vMenu(){
   <div class="card">${roleGuide()}</div>`;
 }
 
-const VIEWS = {setup:vSetup, reveal:vReveal, team:vTeam, vote:vVote, quest:vQuest, questResult:vQuestResult, assassin:vAssassin, end:vEnd, menu:vMenu};
+const VIEWS = {setup:vSetup, reveal:vReveal, team:vTeam, vote:vVote, svote:vSVote, svoteResult:vSVoteResult, quest:vQuest, questResult:vQuestResult, assassin:vAssassin, end:vEnd, menu:vMenu};
 function render(){ $app.innerHTML = (VIEWS[S.screen]||vSetup)(); }
 
 // ---------- 진행 ----------
 function nextLeader(){ S.leader = (S.leader+1) % S.players.length; }
 function endGame(w, reason){ set({screen:"end", winner:w, reason}); }
 
+const tally = () => S.screen==="svoteResult" ? ` (찬${S.tv.filter(v=>v).length}:반${S.tv.filter(v=>!v).length})` : "";
 const ACT = {
   cnt(el){
     const wasRec = RECOMMEND[S.count].some(r=>sameOpts(S.opts, r.opts));
@@ -488,14 +538,24 @@ const ACT = {
     else if(S.team.length < need) S.team.push(i);
     save(); render();
   },
-  toVote(){ set({screen:"vote"}); },
+  toVote(){
+    if(S.secretVote) set({screen:"svote", tv:[], tvIdx:0, tvShown:false});
+    else set({screen:"vote"});
+  },
+  voteMode(el){ S.secretVote = el.dataset.v==="1"; save(); render(); },
+  tvShow(){ set({tvShown:true}); },
+  tv(el){
+    S.tv.push(el.dataset.v==="1");
+    if(S.tvIdx < S.players.length-1) set({tvIdx:S.tvIdx+1, tvShown:false});
+    else set({screen:"svoteResult"});
+  },
   backTeam(){ set({screen:"team"}); },
   approve(){
-    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → <b>가결</b>`);
+    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → <b>가결</b>${tally()}`);
     set({screen:"quest", questVotes:[], questMember:0, questShown:false, team:shuffle(S.team)});
   },
   reject(){
-    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → 부결`);
+    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → 부결${tally()}`);
     S.rejects++;
     if(S.rejects >= 5) return endGame("e","원정대가 5번 연속 부결되었습니다.");
     nextLeader();
@@ -533,7 +593,7 @@ const ACT = {
   toSetup(){
     if(S.screen==="menu" && !confirm("정말 게임을 끝낼까요?")) return;
     const names = S.players ? S.players.map(p=>p.name) : S.names;
-    S = freshSetup({count:S.count, names, opts:S.opts}); save(); render();
+    S = freshSetup({count:S.count, names, opts:S.opts, secretVote:S.secretVote}); save(); render();
   }
 };
 
