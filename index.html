@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#14121c">
+<title>원탁의 밀정</title>
+<style>
+:root{
+  --bg:#14121c; --panel:#1f1c2b; --panel2:#2a2639; --text:#f1eef8; --muted:#a39db6;
+  --good:#3b82f6; --good-soft:#1e3a66; --evil:#e5484d; --evil-soft:#5c1d22;
+  --gold:#e8b949; --ok:#30a46c; --line:#3a3550;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;}
+body{min-height:100vh;min-height:100dvh}
+#app{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:26px;margin:8px 0 4px;text-align:center;letter-spacing:-.5px}
+h2{font-size:20px;margin:0 0 12px}
+.sub{color:var(--muted);text-align:center;font-size:14px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:8px;align-items:center}
+.wrap{flex-wrap:wrap}
+.muted{color:var(--muted);font-size:14px}
+.center{text-align:center}
+button{font:inherit;border:0;border-radius:12px;padding:14px 16px;font-size:17px;font-weight:600;
+  background:var(--panel2);color:var(--text);cursor:pointer;width:100%;touch-action:manipulation}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.35}
+.primary{background:var(--gold);color:#1b1608}
+.good{background:var(--good);color:#fff}
+.evil{background:var(--evil);color:#fff}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);font-size:15px;padding:10px}
+.small{width:auto;padding:8px 12px;font-size:15px}
+input[type=text]{font:inherit;font-size:16px;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--text)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:16px}
+.stepper button{width:52px;height:52px;padding:0;font-size:26px}
+.stepper .num{font-size:40px;font-weight:700;min-width:60px;text-align:center}
+.names{display:grid;gap:8px}
+.toggle{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;
+  background:var(--panel2);margin-bottom:8px;cursor:pointer;user-select:none}
+.toggle .t{font-weight:600}
+.toggle .d{font-size:13px;color:var(--muted);margin-top:2px}
+.sw{width:46px;height:28px;border-radius:14px;background:#4a4560;position:relative;flex-shrink:0;margin-left:10px}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.15s}
+.on .sw{background:var(--ok)} .on .sw::after{left:21px}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--panel2)}
+.pill.g{background:var(--good-soft);color:#9cc2ff} .pill.e{background:var(--evil-soft);color:#ff9a9d}
+.big{font-size:34px;font-weight:800;margin:10px 0}
+.pass{min-height:60vh;display:flex;flex-direction:column;justify-content:center;gap:18px;text-align:center}
+.pass .who{font-size:36px;font-weight:800;color:var(--gold)}
+.role{border-radius:16px;padding:22px 16px;text-align:center}
+.role.g{background:linear-gradient(160deg,#1e3a66,#172440)}
+.role.e{background:linear-gradient(160deg,#5c1d22,#33131a)}
+.role .name{font-size:32px;font-weight:800;margin:6px 0}
+.role .desc{font-size:15px;line-height:1.5;color:#e6e2f0}
+.info{margin-top:14px;padding:12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:16px;line-height:1.6}
+.quests{display:flex;justify-content:space-between;gap:6px;margin:8px 0 4px}
+.q{flex:1;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-weight:800;font-size:20px;position:relative;background:var(--panel2)}
+.q .n{font-size:11px;color:var(--muted);font-weight:600}
+.q.cur{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,185,73,.3)}
+.q.s{background:var(--good);border-color:var(--good)} .q.f{background:var(--evil);border-color:var(--evil)}
+.q.s .n,.q.f .n{color:#fff}
+.q .two{position:absolute;bottom:-6px;font-size:10px;background:var(--evil);color:#fff;padding:1px 5px;border-radius:6px}
+.track{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);font-size:12px;display:flex;
+  align-items:center;justify-content:center;color:var(--muted)}
+.dot.x{background:var(--evil);border-color:var(--evil);color:#fff}
+.dot.last{border-color:var(--evil)}
+.plist{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pbtn{padding:14px 8px;font-size:16px;border:2px solid transparent;position:relative}
+.pbtn.sel{border-color:var(--gold);background:#3b3220;color:var(--gold)}
+.crown{color:var(--gold)}
+.results{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.rc{width:56px;height:76px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;
+  animation:pop .35s both}
+.rc.s{background:var(--good)} .rc.f{background:var(--evil)}
+@keyframes pop{from{transform:scale(.3) rotateY(90deg);opacity:0}to{transform:none;opacity:1}}
+.log{font-size:14px;line-height:1.7;color:var(--muted)}
+.log b{color:var(--text)}
+.gap{height:10px}
+.banner{border-radius:16px;padding:26px 16px;text-align:center;margin-bottom:14px}
+.banner.g{background:linear-gradient(160deg,#2552a0,#172440)}
+.banner.e{background:linear-gradient(160deg,#9b2a30,#33131a)}
+.banner .big{font-size:30px}
+.err{color:#ff9a9d;font-size:14px;margin-top:8px;text-align:center}
+.footer{display:flex;gap:8px;margin-top:20px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(() => {
+"use strict";
+
+// ---------- 규칙 데이터 ----------
+const TEAM_SIZES = {
+  5:[2,3,2,3,3], 6:[2,3,4,3,4], 7:[2,3,3,4,4],
+  8:[3,4,4,5,5], 9:[3,4,4,5,5], 10:[3,4,4,5,5]
+};
+const EVIL_COUNT = {5:2,6:2,7:3,8:3,9:3,10:4};
+const ROLES = {
+  merlin:   {name:"멀린",     team:"g", desc:"악의 세력이 누군지 알고 있습니다. 하지만 들키면 암살당해요. 은근히 선을 이끄세요."},
+  percival: {name:"퍼시발",   team:"g", desc:"멀린이 누군지 압니다(모르가나가 있으면 둘 중 누가 진짜인지는 모름). 멀린을 지키세요."},
+  servant:  {name:"선의 기사", team:"g", desc:"아무 정보도 없습니다. 대화와 투표로 악을 찾아내세요."},
+  assassin: {name:"암살자",   team:"e", desc:"선이 원정 3번을 성공해도, 마지막에 멀린을 맞히면 악이 승리합니다."},
+  morgana:  {name:"모르가나", team:"e", desc:"퍼시발에게 멀린처럼 보입니다. 멀린 행세를 해서 퍼시발을 헷갈리게 하세요."},
+  mordred:  {name:"모드레드", team:"e", desc:"멀린에게도 정체가 보이지 않는 악의 우두머리입니다."},
+  oberon:   {name:"오베론",   team:"e", desc:"악이지만 다른 악을 모르고, 다른 악도 당신을 모릅니다. (멀린에게는 보임)"},
+  minion:   {name:"악의 하수인", team:"e", desc:"동료 악을 알고 있습니다. 원정을 실패시키고 정체를 숨기세요."}
+};
+
+// ---------- 상태 ----------
+const KEY = "roundtable-spy-v1";
+let S = load() || freshSetup();
+
+function freshSetup(prev){
+  return {
+    screen:"setup",
+    count: prev ? prev.count : 6,
+    names: prev ? prev.names.slice() : [],
+    opts: prev ? Object.assign({}, prev.opts) : {percival:true, morgana:true, mordred:false, oberon:false}
+  };
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+function set(patch){ Object.assign(S, patch); save(); render(); window.scrollTo(0,0); }
+
+const $app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const nm = i => esc(S.players[i].name);
+
+// ---------- 게임 시작 ----------
+function buildRoles(count, opts){
+  const evilN = EVIL_COUNT[count];
+  const evil = ["assassin"];
+  if(opts.morgana) evil.push("morgana");
+  if(opts.mordred) evil.push("mordred");
+  if(opts.oberon)  evil.push("oberon");
+  if(evil.length > evilN) return {error:`${count}명은 악이 ${evilN}명이라 특수 악 역할을 ${evilN-1}개까지만 고를 수 있어요.`};
+  while(evil.length < evilN) evil.push("minion");
+  const good = ["merlin"];
+  if(opts.percival) good.push("percival");
+  while(good.length < count - evilN) good.push("servant");
+  return {roles: shuffle(good.concat(evil))};
+}
+
+function startGame(){
+  const n = S.count;
+  const names = [];
+  for(let i=0;i<n;i++){ const v=(S.names[i]||"").trim(); names.push(v || `플레이어${i+1}`); }
+  const dup = names.find((v,i)=>names.indexOf(v)!==i);
+  if(dup){ S.error = `이름 "${dup}"이(가) 중복돼요.`; render(); return; }
+  const r = buildRoles(n, S.opts);
+  if(r.error){ S.error = r.error; render(); return; }
+  S.error = null;
+  set({
+    screen:"reveal",
+    players: names.map((name,i)=>({name, role:r.roles[i]})),
+    revealIdx:0, revealShown:false,
+    quests:[null,null,null,null,null], // {team:[], fails, result:'s'|'f'}
+    questIdx:0, leader:Math.floor(Math.random()*n), rejects:0,
+    team:[], questVotes:[], questMember:0, questShown:false,
+    log:[], winner:null, reason:null, assassinTarget:null
+  });
+}
+
+// 각 플레이어가 볼 수 있는 정보
+function infoFor(i){
+  const me = S.players[i].role;
+  const others = S.players.map((p,j)=>({...p, j})).filter(p=>p.j!==i);
+  const list = arr => arr.map(p=>`<b>${esc(p.name)}</b>`).join(", ");
+  if(me==="merlin"){
+    const seen = others.filter(p=>ROLES[p.role].team==="e" && p.role!=="mordred");
+    let s = `악의 세력: ${list(seen) || "(보이는 사람 없음)"}`;
+    if(S.players.some(p=>p.role==="mordred")) s += `<br><span class="muted">※ 모드레드는 보이지 않습니다.</span>`;
+    return s;
+  }
+  if(me==="percival"){
+    const seen = shuffle(others.filter(p=>p.role==="merlin"||p.role==="morgana"));
+    return seen.length>1 ? `멀린 후보: ${list(seen)}<br><span class="muted">둘 중 한 명은 모르가나입니다.</span>`
+                         : `멀린: ${list(seen)}`;
+  }
+  if(me==="oberon") return `당신은 동료를 모릅니다.`;
+  if(ROLES[me].team==="e"){
+    const seen = others.filter(p=>ROLES[p.role].team==="e" && p.role!=="oberon");
+    let s = `동료 악: ${list(seen) || "(없음)"}`;
+    if(S.players.some(p=>p.role==="oberon")) s += `<br><span class="muted">※ 오베론은 따로 숨어 있습니다.</span>`;
+    return s;
+  }
+  return `정보 없음. 추리로 승부하세요!`;
+}
+
+// ---------- 화면들 ----------
+function vSetup(){
+  const n = S.count, evilN = EVIL_COUNT[n];
+  let names = "";
+  for(let i=0;i<n;i++) names += `<input type="text" data-name="${i}" placeholder="플레이어${i+1}" value="${esc(S.names[i]||"")}" maxlength="10">`;
+  const tog = (k,t,d) => `<div class="toggle ${S.opts[k]?"on":""}" data-opt="${k}"><div><div class="t">${t}</div><div class="d">${d}</div></div><div class="sw"></div></div>`;
+  return `
+  <h1>🗡️ 원탁의 밀정</h1>
+  <div class="sub">보드 없이 폰 하나로 하는 정체 숨기기 게임</div>
+  <div class="card">
+    <h2>인원</h2>
+    <div class="stepper">
+      <button data-act="cnt" data-d="-1" ${n<=5?"disabled":""}>−</button>
+      <div class="num">${n}</div>
+      <button data-act="cnt" data-d="1" ${n>=10?"disabled":""}>+</button>
+    </div>
+    <div class="center muted" style="margin-top:8px">선 <b style="color:#9cc2ff">${n-evilN}</b> · 악 <b style="color:#ff9a9d">${evilN}</b> &nbsp;|&nbsp; 원정 인원 ${TEAM_SIZES[n].join("-")}${n>=7?" (4번째는 실패 2장 필요)":""}</div>
+  </div>
+  <div class="card">
+    <h2>이름 <span class="muted">(앉은 순서대로)</span></h2>
+    <div class="names">${names}</div>
+  </div>
+  <div class="card">
+    <h2>역할</h2>
+    <div class="muted" style="margin-bottom:10px">멀린 · 암살자는 항상 포함</div>
+    ${tog("percival","퍼시발 (선)","멀린을 알아보는 기사")}
+    ${tog("morgana","모르가나 (악)","퍼시발에게 멀린처럼 보임")}
+    ${tog("mordred","모드레드 (악)","멀린에게 안 보임")}
+    ${tog("oberon","오베론 (악)","악끼리 서로 모름")}
+  </div>
+  ${S.error?`<div class="err">${esc(S.error)}</div>`:""}
+  <div class="gap"></div>
+  <button class="primary" data-act="start">역할 나눠주기 →</button>`;
+}
+
+function vReveal(){
+  const i = S.revealIdx, p = S.players[i];
+  if(!S.revealShown){
+    return `<div class="pass">
+      <div class="muted">${i+1} / ${S.players.length}</div>
+      <div>폰을 이 사람에게 넘기세요</div>
+      <div class="who">${nm(i)}</div>
+      <div class="muted">다른 사람이 화면을 보지 않게 하세요</div>
+      <button class="primary" data-act="showRole">내가 ${nm(i)}이에요 · 역할 보기</button>
+    </div>`;
+  }
+  const r = ROLES[p.role];
+  const last = i === S.players.length-1;
+  return `<div class="pass">
+    <div class="role ${r.team}">
+      <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
+      <div class="name">${r.name}</div>
+      <div class="desc">${r.desc}</div>
+      <div class="info">${infoFor(i)}</div>
+    </div>
+    <button data-act="hideRole">확인했어요 · 가리고 ${last?"게임 시작":"다음 사람에게"}</button>
+  </div>`;
+}
+
+function board(){
+  const sizes = TEAM_SIZES[S.players.length];
+  const q = sizes.map((sz,k)=>{
+    const res = S.quests[k];
+    const cls = res ? res.result : (k===S.questIdx && !S.winner ? "cur" : "");
+    const two = (k===3 && S.players.length>=7) ? `<span class="two">실패2</span>` : "";
+    return `<div class="q ${cls}"><span class="n">${k+1}원정</span>${res? (res.result==="s"?"✓":"✗") : sz}${two}</div>`;
+  }).join("");
+  let dots = "";
+  for(let k=0;k<5;k++) dots += `<div class="dot ${k<S.rejects?"x":""} ${k===4?"last":""}">${k+1}</div>`;
+  return `<div class="card">
+    <div class="quests">${q}</div>
+    <div class="center muted" style="margin-top:12px">부결 트랙 (5번 부결 시 악 승리)</div>
+    <div class="track">${dots}</div>
+  </div>`;
+}
+
+function vTeam(){
+  const need = TEAM_SIZES[S.players.length][S.questIdx];
+  const btns = S.players.map((p,i)=>`<button class="pbtn ${S.team.includes(i)?"sel":""}" data-act="pick" data-i="${i}">${i===S.leader?'<span class="crown">👑</span> ':""}${esc(p.name)}</button>`).join("");
+  return `${board()}
+  <div class="card">
+    <h2>${S.questIdx+1}번째 원정 · 팀 구성</h2>
+    <div class="muted" style="margin-bottom:12px">대표 <b class="crown">👑 ${nm(S.leader)}</b>님이 원정대 <b>${need}명</b>을 고르세요. (${S.team.length}/${need})</div>
+    <div class="plist">${btns}</div>
+    <div class="gap"></div>
+    <button class="primary" data-act="toVote" ${S.team.length!==need?"disabled":""}>이 팀으로 투표하기</button>
+  </div>
+  ${logCard()}
+  <button class="ghost" data-act="menu">메뉴</button>`;
+}
+
+function vVote(){
+  const team = S.team.map(i=>`<span class="pill">${nm(i)}</span>`).join(" ");
+  return `${board()}
+  <div class="card center">
+    <h2>원정대 찬반 투표</h2>
+    <div class="row wrap" style="justify-content:center;margin-bottom:12px">${team}</div>
+    <div class="muted" style="margin-bottom:14px">
+      다 같이 "하나, 둘, 셋!" 하고 동시에 👍/👎를 내세요.<br>
+      과반수(동수는 부결)가 찬성하면 가결입니다.
+    </div>
+    <div class="row">
+      <button class="good" data-act="approve">가결</button>
+      <button class="evil" data-act="reject">부결</button>
+    </div>
+    ${S.rejects===4?`<div class="err">⚠️ 이번에 부결되면 악이 승리합니다!</div>`:""}
+  </div>
+  <button class="ghost" data-act="backTeam">← 팀 다시 고르기</button>`;
+}
+
+function vQuest(){
+  const k = S.questMember, pi = S.team[k];
+  if(!S.questShown){
+    return `<div class="pass">
+      <div class="muted">원정 투표 ${k+1} / ${S.team.length}</div>
+      <div>폰을 이 사람에게 넘기세요</div>
+      <div class="who">${nm(pi)}</div>
+      <button class="primary" data-act="questShow">내가 ${nm(pi)}이에요</button>
+    </div>`;
+  }
+  const isGood = ROLES[S.players[pi].role].team==="g";
+  return `<div class="pass">
+    <h2>${nm(pi)}님, 원정 카드를 내세요</h2>
+    <div class="muted">${isGood?"선의 세력은 성공만 낼 수 있어요.":"악의 세력은 성공/실패 중 고를 수 있어요."}</div>
+    <button class="good" data-act="qv" data-v="s" style="padding:28px;font-size:22px">✓ 성공</button>
+    <button class="evil" data-act="qv" data-v="f" style="padding:28px;font-size:22px" ${isGood?"disabled":""}>✗ 실패</button>
+  </div>`;
+}
+
+function vQuestResult(){
+  const res = S.quests[S.questIdx];
+  const cards = shuffle(S.lastVotes).map((v,i)=>`<div class="rc ${v}" style="animation-delay:${i*0.25}s">${v==="s"?"✓":"✗"}</div>`).join("");
+  return `<div class="card center">
+    <h2>${S.questIdx+1}번째 원정 결과</h2>
+    <div class="results">${cards}</div>
+    <div class="big" style="color:${res.result==="s"?"#9cc2ff":"#ff9a9d"}">${res.result==="s"?"원정 성공!":"원정 실패!"}</div>
+    <div class="muted">실패 카드 ${res.fails}장${S.questIdx===3&&S.players.length>=7?" (이번 원정은 2장 이상이어야 실패)":""}</div>
+  </div>
+  <button class="primary" data-act="afterQuest">계속</button>`;
+}
+
+function vAssassin(){
+  const asn = S.players.findIndex(p=>p.role==="assassin");
+  const btns = S.players.map((p,i)=>i===asn?"":`<button class="pbtn ${S.assassinTarget===i?"sel":""}" data-act="aim" data-i="${i}">${esc(p.name)}</button>`).join("");
+  return `${board()}
+  <div class="banner e">
+    <div class="big">🗡️ 암살 시간</div>
+    <div>선이 원정 3번을 성공했습니다.<br>악의 세력은 정체를 밝히고 상의한 뒤,<br>암살자 <b>${nm(asn)}</b>님이 멀린을 지목하세요.</div>
+  </div>
+  <div class="card"><div class="plist">${btns}</div>
+  <div class="gap"></div>
+  <button class="evil" data-act="kill" ${S.assassinTarget==null?"disabled":""}>이 사람을 암살</button></div>`;
+}
+
+function vEnd(){
+  const g = S.winner==="g";
+  const rows = S.players.map(p=>{
+    const r = ROLES[p.role];
+    return `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
+      <b>${esc(p.name)}</b><span class="pill ${r.team}">${r.name}</span></div>`;
+  }).join("");
+  return `<div class="banner ${g?"g":"e"}">
+    <div class="big">${g?"🛡️ 선의 승리!":"🗡️ 악의 승리!"}</div>
+    <div>${S.reason}</div>
+  </div>
+  ${board()}
+  <div class="card"><h2>정체 공개</h2>${rows}</div>
+  ${logCard()}
+  <div class="footer">
+    <button class="primary" data-act="again">같은 멤버로 다시</button>
+  </div>
+  <div class="gap"></div>
+  <button class="ghost" data-act="toSetup">설정으로</button>`;
+}
+
+function logCard(){
+  if(!S.log || !S.log.length) return "";
+  return `<div class="card"><h2>기록</h2><div class="log">${S.log.slice().reverse().join("<br>")}</div></div>`;
+}
+
+function vMenu(){
+  return `<div class="card">
+    <h2>메뉴</h2>
+    <button data-act="closeMenu">← 게임으로 돌아가기</button>
+    <div class="gap"></div>
+    <button data-act="again">처음부터 다시 (같은 멤버, 역할 새로)</button>
+    <div class="gap"></div>
+    <button class="evil" data-act="toSetup">게임 끝내고 설정으로</button>
+  </div>`;
+}
+
+const VIEWS = {setup:vSetup, reveal:vReveal, team:vTeam, vote:vVote, quest:vQuest, questResult:vQuestResult, assassin:vAssassin, end:vEnd, menu:vMenu};
+function render(){ $app.innerHTML = (VIEWS[S.screen]||vSetup)(); }
+
+// ---------- 진행 ----------
+function nextLeader(){ S.leader = (S.leader+1) % S.players.length; }
+function endGame(w, reason){ set({screen:"end", winner:w, reason}); }
+
+const ACT = {
+  cnt(el){ S.count = Math.min(10, Math.max(5, S.count + +el.dataset.d)); S.error=null; save(); render(); },
+  start: startGame,
+  showRole(){ set({revealShown:true}); },
+  hideRole(){
+    if(S.revealIdx < S.players.length-1) set({revealIdx:S.revealIdx+1, revealShown:false});
+    else { S.log.push(`첫 대표: <b>${nm(S.leader)}</b>`); set({screen:"team", team:[]}); }
+  },
+  pick(el){
+    const i = +el.dataset.i, need = TEAM_SIZES[S.players.length][S.questIdx];
+    if(S.team.includes(i)) S.team = S.team.filter(x=>x!==i);
+    else if(S.team.length < need) S.team.push(i);
+    save(); render();
+  },
+  toVote(){ set({screen:"vote"}); },
+  backTeam(){ set({screen:"team"}); },
+  approve(){
+    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → <b>가결</b>`);
+    set({screen:"quest", questVotes:[], questMember:0, questShown:false, team:shuffle(S.team)});
+  },
+  reject(){
+    S.log.push(`${S.questIdx+1}원정 · 👑${nm(S.leader)} 제안 [${S.team.map(nm).join(", ")}] → 부결`);
+    S.rejects++;
+    if(S.rejects >= 5) return endGame("e","원정대가 5번 연속 부결되었습니다.");
+    nextLeader();
+    set({screen:"team", team:[]});
+  },
+  questShow(){ set({questShown:true}); },
+  qv(el){
+    S.questVotes.push(el.dataset.v);
+    if(S.questMember < S.team.length-1){ set({questMember:S.questMember+1, questShown:false}); return; }
+    const fails = S.questVotes.filter(v=>v==="f").length;
+    const needFails = (S.questIdx===3 && S.players.length>=7) ? 2 : 1;
+    const result = fails >= needFails ? "f" : "s";
+    S.quests[S.questIdx] = {team:S.team.slice(), fails, result};
+    S.log.push(`→ ${S.questIdx+1}원정 <b>${result==="s"?"성공":"실패"}</b> (실패 ${fails}장)`);
+    set({screen:"questResult", lastVotes:S.questVotes.slice(), questVotes:[]});
+  },
+  afterQuest(){
+    const s = S.quests.filter(q=>q&&q.result==="s").length;
+    const f = S.quests.filter(q=>q&&q.result==="f").length;
+    if(f>=3) return endGame("e","원정이 3번 실패했습니다.");
+    if(s>=3) return set({screen:"assassin", assassinTarget:null});
+    S.questIdx++; S.rejects=0; nextLeader();
+    set({screen:"team", team:[]});
+  },
+  aim(el){ set({assassinTarget:+el.dataset.i}); },
+  kill(){
+    const t = S.players[S.assassinTarget];
+    const merlin = S.players.find(p=>p.role==="merlin");
+    if(t.role==="merlin") endGame("e", `암살자가 멀린(<b>${esc(t.name)}</b>)을 찾아냈습니다!`);
+    else endGame("g", `암살자가 <b>${esc(t.name)}</b>님을 지목했지만, 멀린은 <b>${esc(merlin.name)}</b>님이었습니다!`);
+  },
+  menu(){ S.prevScreen = S.screen; set({screen:"menu"}); },
+  closeMenu(){ set({screen:S.prevScreen||"team"}); },
+  again(){ S.names = S.players.map(p=>p.name); S.count = S.players.length; startGame(); },
+  toSetup(){
+    if(S.screen==="menu" && !confirm("정말 게임을 끝낼까요?")) return;
+    const names = S.players ? S.players.map(p=>p.name) : S.names;
+    S = freshSetup({count:S.count, names, opts:S.opts}); save(); render();
+  }
+};
+
+$app.addEventListener("click", e=>{
+  const opt = e.target.closest("[data-opt]");
+  if(opt){ const k=opt.dataset.opt; S.opts[k]=!S.opts[k]; S.error=null; save(); render(); return; }
+  const el = e.target.closest("[data-act]");
+  if(el && !el.disabled && ACT[el.dataset.act]) ACT[el.dataset.act](el);
+});
+$app.addEventListener("input", e=>{
+  if(e.target.dataset.name!=null){ S.names[+e.target.dataset.name] = e.target.value; save(); }
+});
+
+render();
+})();
+</script>
+</body>
+</html>
