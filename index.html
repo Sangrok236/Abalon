@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#14121c">
-<title>원탁의 밀정</title>
+<title>원탁</title>
 <style>
 :root{
   --bg:#14121c; --panel:#1f1c2b; --panel2:#2a2639; --text:#f1eef8; --muted:#a39db6;
@@ -244,7 +244,7 @@ function vSetup(){
   for(let i=0;i<n;i++) names += `<input type="text" data-name="${i}" placeholder="플레이어${i+1}" value="${esc(S.names[i]||"")}" maxlength="10">`;
   const tog = (k,t,d) => `<div class="toggle ${S.opts[k]?"on":""}" data-opt="${k}"><div><div class="t">${t}</div><div class="d">${d}</div></div><div class="sw"></div></div>`;
   return `
-  <h1>🗡️ 원탁의 밀정</h1>
+  <h1>🗡️ 원탁</h1>
   <div class="sub">보드 없이 폰 하나로 하는 정체 숨기기 게임</div>
   <div class="card">
     <h2>인원</h2>
