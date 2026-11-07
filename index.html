@@ -56,13 +56,12 @@ input[type=text]{font:inherit;font-size:16px;width:100%;padding:12px;border-radi
 .role.e{background:linear-gradient(160deg,#5c1d22,#33131a)}
 .role .name{font-size:32px;font-weight:800;margin:6px 0}
 .role .desc{font-size:15px;line-height:1.5;color:#e6e2f0}
-.peekbox{position:relative;border-radius:16px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:pointer}
-.peekbox .role{visibility:hidden}
-.peekbox .cover{position:absolute;inset:0;border-radius:16px;background:repeating-linear-gradient(45deg,#2a2639 0 14px,#25212f 14px 28px);
-  border:2px dashed var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px;min-height:260px}
-.peekbox.peek .role{visibility:visible}
-.peekbox.peek .cover{display:none}
-.peekbox:not(.peek) .role{min-height:260px}
+.rec{background:var(--panel2);border-radius:12px;padding:12px;margin-bottom:12px;font-size:15px;line-height:1.6}
+.rec .tag{color:var(--gold);font-weight:700;font-size:13px}
+table.rt{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+table.rt td,table.rt th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.rt tr.me{background:#3b3220}
+details summary{cursor:pointer;color:var(--muted);font-size:14px;margin-top:6px}
 .info{margin-top:14px;padding:12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:16px;line-height:1.6}
 .quests{display:flex;justify-content:space-between;gap:6px;margin:8px 0 4px}
 .q{flex:1;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);display:flex;flex-direction:column;
@@ -120,6 +119,26 @@ const ROLES = {
   minion:   {name:"악의 하수인", team:"e", desc:"동료 악을 알고 있습니다. 원정을 실패시키고 정체를 숨기세요."}
 };
 
+// 인원별 추천 조합 (멀린·암살자 기본 포함)
+const RECOMMEND = {
+  5: {opts:{percival:true, morgana:true, mordred:false, oberon:false}, tip:"악이 2명뿐이라 모르가나로 퍼시발을 헷갈리게 하는 정도가 적당해요."},
+  6: {opts:{percival:true, morgana:true, mordred:false, oberon:false}, tip:"선이 4명으로 늘어 가장 무난한 표준 구성이에요."},
+  7: {opts:{percival:true, morgana:true, mordred:false, oberon:true},  tip:"악이 3명. 오베론을 넣으면 악끼리도 손발이 안 맞아 선이 할 만해져요. 악이 약하다 싶으면 오베론 대신 모드레드."},
+  8: {opts:{percival:true, morgana:true, mordred:true,  oberon:false}, tip:"선이 5명이라 모드레드를 넣어 멀린의 정보를 줄여 균형을 맞춰요."},
+  9: {opts:{percival:true, morgana:true, mordred:true,  oberon:false}, tip:"선이 6명으로 선이 유리한 인원이라 모드레드는 꼭 넣는 걸 추천해요."},
+  10:{opts:{percival:true, morgana:true, mordred:true,  oberon:true},  tip:"특수 역할 전부. 오베론이 들어가 악도 서로 다 알지는 못해요."}
+};
+const OPT_NAMES = {percival:"퍼시발", morgana:"모르가나", mordred:"모드레드", oberon:"오베론"};
+function recText(n){
+  const o = RECOMMEND[n].opts, evilN = EVIL_COUNT[n];
+  const good = ["멀린"]; if(o.percival) good.push("퍼시발");
+  const gs = n - evilN - good.length; if(gs>0) good.push(`선의 기사×${gs}`);
+  const evil = ["암살자"]; ["morgana","mordred","oberon"].forEach(k=>{ if(o[k]) evil.push(OPT_NAMES[k]); });
+  const ms = evilN - evil.length; if(ms>0) evil.push(`하수인×${ms}`);
+  return {good:good.join(", "), evil:evil.join(", ")};
+}
+const sameOpts = (a,b) => Object.keys(OPT_NAMES).every(k=>!!a[k]===!!b[k]);
+
 // ---------- 상태 ----------
 const KEY = "roundtable-spy-v1";
 let S = load() || freshSetup();
@@ -129,7 +148,7 @@ function freshSetup(prev){
     screen:"setup",
     count: prev ? prev.count : 6,
     names: prev ? prev.names.slice() : [],
-    opts: prev ? Object.assign({}, prev.opts) : {percival:true, morgana:true, mordred:false, oberon:false}
+    opts: prev ? Object.assign({}, prev.opts) : Object.assign({}, RECOMMEND[6].opts)
   };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -226,7 +245,22 @@ function vSetup(){
   </div>
   <div class="card">
     <h2>역할</h2>
-    <div class="muted" style="margin-bottom:10px">멀린 · 암살자는 항상 포함</div>
+    ${(() => {
+      const rt = recText(n), applied = sameOpts(S.opts, RECOMMEND[n].opts);
+      const rows = [5,6,7,8,9,10].map(k=>{ const t=recText(k); return `<tr class="${k===n?"me":""}"><td><b>${k}인</b></td><td style="color:#9cc2ff">${t.good}</td><td style="color:#ff9a9d">${t.evil}</td></tr>`; }).join("");
+      return `<div class="rec">
+        <div class="tag">⭐ ${n}인 추천 조합</div>
+        <div><span style="color:#9cc2ff">선</span> ${rt.good}</div>
+        <div><span style="color:#ff9a9d">악</span> ${rt.evil}</div>
+        <div class="muted" style="margin-top:6px">${RECOMMEND[n].tip}</div>
+        <div class="gap"></div>
+        <button class="small ${applied?"ghost":"primary"}" data-act="applyRec" ${applied?"disabled":""}>${applied?"✓ 추천 조합 적용됨":"추천 조합 적용"}</button>
+        <details><summary>인원별 추천 조합 전체 보기</summary>
+          <table class="rt"><tr><th></th><th>선</th><th>악</th></tr>${rows}</table>
+        </details>
+      </div>`;
+    })()}
+    <div class="muted" style="margin-bottom:10px">직접 고르기 · 멀린과 암살자는 항상 포함</div>
     ${tog("percival","퍼시발 (선)","멀린을 알아보는 기사")}
     ${tog("morgana","모르가나 (악)","퍼시발에게 멀린처럼 보임")}
     ${tog("mordred","모드레드 (악)","멀린에게 안 보임")}
@@ -252,21 +286,14 @@ function vReveal(){
   const last = i === S.players.length-1;
   return `<div class="pass">
     <div class="muted">${nm(i)}님의 역할</div>
-    <div class="peekbox" data-hold>
-      <div class="role ${r.team}">
-        <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
-        <div class="name">${r.name}</div>
-        <div class="desc">${r.desc}</div>
-        <div class="info">${infoFor(i)}</div>
-      </div>
-      <div class="cover">
-        <div style="font-size:44px">👆</div>
-        <div style="font-size:20px;font-weight:800">꾹 누르고 있는 동안만<br>역할이 보여요</div>
-        <div class="muted">손을 떼면 바로 다시 가려집니다</div>
-      </div>
+    <div class="role ${r.team}">
+      <div class="pill ${r.team}">${r.team==="g"?"선의 세력":"악의 세력"}</div>
+      <div class="name">${r.name}</div>
+      <div class="desc">${r.desc}</div>
+      <div class="info">${infoFor(i)}</div>
     </div>
-    <button class="primary" data-act="hideRole" id="doneBtn" disabled>확인 완료 · ${last?"게임 시작":"다음 사람에게 넘기기"}</button>
-    <div class="muted" id="doneHint">한 번 이상 눌러서 확인하면 버튼이 켜져요</div>
+    <button class="primary" data-act="hideRole">확인 완료 · ${last?"게임 시작":"다음 사람에게 넘기기"}</button>
+    <div class="muted">누르면 역할이 바로 가려져요</div>
   </div>`;
 }
 
@@ -410,7 +437,13 @@ function nextLeader(){ S.leader = (S.leader+1) % S.players.length; }
 function endGame(w, reason){ set({screen:"end", winner:w, reason}); }
 
 const ACT = {
-  cnt(el){ S.count = Math.min(10, Math.max(5, S.count + +el.dataset.d)); S.error=null; save(); render(); },
+  cnt(el){
+    const wasRec = sameOpts(S.opts, RECOMMEND[S.count].opts);
+    S.count = Math.min(10, Math.max(5, S.count + +el.dataset.d));
+    if(wasRec) S.opts = Object.assign({}, RECOMMEND[S.count].opts); // 추천을 쓰고 있었으면 인원에 맞춰 따라감
+    S.error=null; save(); render();
+  },
+  applyRec(){ S.opts = Object.assign({}, RECOMMEND[S.count].opts); S.error=null; save(); render(); },
   start: startGame,
   showRole(){ set({revealShown:true}); },
   hideRole(){
@@ -478,19 +511,6 @@ $app.addEventListener("click", e=>{
   const el = e.target.closest("[data-act]");
   if(el && !el.disabled && ACT[el.dataset.act]) ACT[el.dataset.act](el);
 });
-// 누르고 있는 동안만 역할 보이기
-const unpeek = () => document.querySelectorAll(".peekbox.peek").forEach(b=>b.classList.remove("peek"));
-$app.addEventListener("pointerdown", e=>{
-  const box = e.target.closest("[data-hold]");
-  if(!box) return;
-  e.preventDefault();
-  box.classList.add("peek");
-  const btn = document.getElementById("doneBtn"); if(btn) btn.disabled = false;
-  const hint = document.getElementById("doneHint"); if(hint) hint.textContent = "확인했으면 버튼을 누르고 폰을 넘기세요";
-});
-["pointerup","pointercancel","pointerleave","blur"].forEach(t=>window.addEventListener(t, unpeek));
-document.addEventListener("visibilitychange", unpeek);
-$app.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-hold]")) e.preventDefault(); });
 $app.addEventListener("input", e=>{
   if(e.target.dataset.name!=null){ S.names[+e.target.dataset.name] = e.target.value; save(); }
 });
